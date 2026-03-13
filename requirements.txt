@@ -1,0 +1,6 @@
+rich
+click
+requests
+python-dotenv
+openai
+google-genai
