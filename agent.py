@@ -1,3 +1,4 @@
+import os
 import click
 from rich.console import Console
 from rich.markdown import Markdown
@@ -17,9 +18,6 @@ INTENTS = {
                  'clean', 'suggestions', 'best practice'],
     "fix":      ['fix', 'error', 'bug', 'crash', 'broken',
                  'not working', 'failing', 'exception'],
-    "debug":   ["bug", "error", "traceback", "exception", "crash", "failing",
-    "stacktrace"],
-    "optimize": ["performance", "speed", "latency", "memory", "slow", "bottleneck"], 
 }
 
 def detect_intent(question):
@@ -36,7 +34,7 @@ PROMPTS = {
     "review":  "You are a senior code reviewer. Find bugs, edge cases, security issues, error handling problems. Format: ## Issues\n## Suggestions\n## Overall" + COT,
     "improve": "You are a code quality assistant. Suggest improvements with before/after examples. Format: ## What to improve\n## Changes (with code)" + COT,
     "fix":     "You are a debugging assistant. Find root cause and provide a fix. Format: ## Root cause\n## Fix\n## Prevention" + COT,
-    "general": "You are a helpful coding assistant. Answer naturally and concisely. Use markdown for code.",
+    "general": "You are a helpful coding assistant. You are given a project structure and optionally a file. Answer questions about the project naturally and concisely. Use markdown for code.",
 }
 
 LABELS = {
@@ -48,14 +46,24 @@ LABELS = {
 }
 
 @click.command()
-@click.option('--file',  '-f', default=None,  help='File to focus on')
-@click.option('--root',  '-r', default='.',   help='Project root')
-@click.option('--model', '-m', default=None,  help='qwen / llama / mistral / gemma / deepseek')
-@click.option('--save',  '-s', is_flag=True,  help='Save responses to suggestions.md')
-def main(file, root, model, save):
+@click.option('--file',      '-f', default=None,  help='File to focus on')
+@click.option('--root',      '-r', default='.',   help='Project root')
+@click.option('--model',     '-m', default=None,  help='qwen / llama / mixtral / gemma')
+@click.option('--save',      '-s', is_flag=True,  help='Save responses to suggestions.md')
+@click.option('--max-lines', '-l', default=300,   help='Max lines per file (0 = no limit)')
+def main(file, root, model, save, max_lines):
+    # auto detect file if none passed
+    if not file:
+        for candidate in ['main.py', 'app.py', 'index.py', 'index.js', 'app.js']:
+            if os.path.exists(os.path.join(root, candidate)):
+                file = os.path.join(root, candidate)
+                console.print(f"[dim]Auto-loaded: {file}[/dim]")
+                break
+
     console.print("[bold green]Code Agent[/bold green] — type 'quit' to exit\n")
     if file:
-        console.print(f"[dim]Focusing on: {file}[/dim]\n")
+        console.print(f"[dim]Focusing on: {file}[/dim]")
+    console.print(f"[dim]Max lines: {'no limit' if max_lines == 0 else max_lines}[/dim]\n")
 
     history = []
 
@@ -73,11 +81,7 @@ def main(file, root, model, save):
             continue
 
         intent = detect_intent(question)
-
-        if intent != "general":
-            context = build_context(question, file_path=file, project_root=root)
-        else:
-            context = question
+        context = build_context(question, file_path=file, project_root=root, max_lines=max_lines)
 
         if history:
             history_text = "\n".join(
