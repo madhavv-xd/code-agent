@@ -1,12 +1,12 @@
 # Code Agent
 
-A terminal-based AI coding assistant that reads your code and suggests improvements. Supports Gemini API and local Ollama models.
+A terminal-based AI coding assistant that reads your code and suggests improvements using Groq's free API.
 
 ## Requirements
 
 - Python 3.8+
 - Git
-- Ollama (optional, for local models)
+- Groq API key (free) — get one at https://console.groq.com
 
 ## Installation
 
@@ -30,15 +30,9 @@ pip install -r requirements.txt
 ### Step 4 — Create a `.env` file
 Create a file called `.env` inside the `code-agent` folder:
 ```
-# use gemini (recommended)
-MODEL_PROVIDER=gemini
-GEMINI_API_KEY=your-key-here
-
-# or use ollama (local, free)
-MODEL_PROVIDER=ollama
-OLLAMA_MODEL=qwen2.5-coder
+GROQ_API_KEY=your-key-here
+DEFAULT_MODEL=gpt120b
 ```
-Get a free Gemini API key at https://aistudio.google.com
 
 ---
 
@@ -49,6 +43,9 @@ python agent.py --file src/main.py
 
 # scan whole project
 python agent.py --root .
+
+# both
+python agent.py --file src/main.py --root .
 ```
 
 ---
@@ -73,28 +70,22 @@ codeagent --file src/main.py
 
 ---
 
-## Ollama setup (optional)
+## Available models
 
-Install Ollama from https://ollama.com then pull a model:
+| Shortname | Model | Best for |
+|---|---|---|
+| `gpt120b` | gpt-oss-120b | code (default) |
+| `gpt20b` | gpt-oss-20b | fast general use |
+
+Switch models with `--model` flag:
 ```bash
-ollama pull qwen2.5-coder   # best for code (~4GB)
-ollama pull llama3.2:3b     # smaller and faster (~2GB)
-```
-
-Start Ollama:
-```bash
-ollama serve
-```
-
-Update your `.env`:
-```
-MODEL_PROVIDER=ollama
-OLLAMA_MODEL=qwen2.5-coder
+codeagent --file app.py --model gpt20b
+codeagent --file app.py --model gpt120b
 ```
 
 ---
 
-## Usage
+## Usage examples
 ```bash
 # explain a file
 codeagent --file app.py
@@ -107,7 +98,34 @@ codeagent --file src/auth.py
 # improve code
 codeagent --file utils.py
 > how can i improve this code
+
+# fix an error
+codeagent --file main.py
+> fix the error in this file
+
+# scan whole project
+codeagent --root .
+> what does this project do
+
+# save suggestions to file
+codeagent --file app.py --save
+> review this file
+# saves to suggestions.md
 ```
+
+---
+
+## Intent detection
+
+The agent automatically detects what kind of help you need and adjusts its response format:
+
+| Your question | Intent | Output |
+|---|---|---|
+| "explain this" / "what does this do" | Explain | Blue — covers purpose, inputs, logic |
+| "find bugs" / "review this" | Review | Yellow — issues, suggestions, overall |
+| "improve this" / "refactor" | Improve | Cyan — before/after code examples |
+| "fix this" / "there's an error" | Fix | Red — root cause, fix, prevention |
+| "hello" / anything else | General | Green — normal response |
 
 ---
 
@@ -120,14 +138,26 @@ pip install -r requirements.txt
 
 ---
 
+## Project structure
+```
+code-agent/
+├── agent.py         # main entry point, chat loop, intent detection
+├── context.py       # reads files, builds prompt
+├── llm.py           # groq API calls, model routing
+├── config.py        # loads settings from .env
+└── requirements.txt
+```
+
+---
+
 ## Troubleshooting
 
-**codeagent command not found** — run `source ~/.bashrc` or `source ~/.zshrc` again.
+**codeagent command not found** — run `source ~/.bashrc` or `source ~/.zshrc`.
 
-**Ollama 404 error** — Ollama isn't running, start it with `ollama serve`.
+**Invalid API key** — make sure `.env` exists in the `code-agent` folder and `GROQ_API_KEY` is correct.
 
-**Model not found** — run `ollama list` to see exact model names, update `.env` to match exactly e.g. `qwen2.5-coder:7b`.
+**Rate limited** — Groq free tier allows 30 requests/minute and 14,400/day. Switch models with `--model` flag to spread usage.
 
-**Slow responses** — switch to Gemini or use a smaller model like `llama3.2:3b`.
+**File not found** — make sure the path you pass to `--file` is correct relative to where you run the command.
 
-**API key error** — make sure `.env` exists in the `code-agent` folder and `GEMINI_API_KEY` is set correctly.
+**No response / timeout** — Groq might be briefly down. Wait a few seconds and try again.
