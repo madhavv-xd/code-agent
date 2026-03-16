@@ -1,9 +1,12 @@
-#configs of my app 
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
-PROVIDER     = os.getenv("MODEL_PROVIDER", "ollama")
-GEMINI_KEY   = os.getenv("GEMINI_API_KEY", "") #returns empty if gemini api key is not found
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b") 
+GROQ_KEY      = os.getenv("GROQ_API_KEY", "")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt120b")
+
+GROQ_MODELS = {
+    "gpt120b":   "openai/gpt-oss-120b",
+    "gpt20b":    "openai/gpt-oss-20b",
+}

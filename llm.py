@@ -1,38 +1,33 @@
-import requests
 import config
+from rich.console import Console
 
-def ask_gemini(system_prompt, user_message):
-    from google import genai
-    from google.genai import types
+console = Console()
 
-    client = genai.Client(api_key=config.GEMINI_KEY)
-    resp = client.models.generate_content(
-        model="gemini-2.0-flash",
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt
-        ),
-        contents=user_message
+def resolve_model(model):
+    if model in config.GROQ_MODELS:
+        return config.GROQ_MODELS[model]
+    return model
+
+def ask(system_prompt, user_message, model=None):
+    from openai import OpenAI
+
+    selected = model or config.DEFAULT_MODEL
+    model_string = resolve_model(selected)
+
+    display = selected if selected in config.GROQ_MODELS else model_string
+    console.print(f"[dim]model: groq / {display}[/dim]")
+
+    client = OpenAI(
+        api_key=config.GROQ_KEY,
+        base_url="https://api.groq.com/openai/v1"
     )
-    return resp.text
-
-def ask_ollama(system_prompt, user_message):
-    url = "http://localhost:11434/api/chat"
-    payload = {
-        "model": config.OLLAMA_MODEL,
-        "messages": [
+    resp = client.chat.completions.create(
+        model=model_string,
+        messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_message}
         ],
-        "stream": False
-    }
-    resp = requests.post(url, json=payload)
-    resp.raise_for_status()
-    return resp.json()["message"]["content"]
-
-def ask(system_prompt, user_message):
-    if config.PROVIDER == "gemini":
-        return ask_gemini(system_prompt, user_message)
-    elif config.PROVIDER == "ollama":
-        return ask_ollama(system_prompt, user_message)
-    else:
-        raise ValueError(f"Unknown provider: {config.PROVIDER}")
+        temperature=0.3,
+        max_tokens=1024,
+    )
+    return resp.choices[0].message.content

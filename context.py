@@ -17,10 +17,14 @@ def get_file_tree(root=".", max_depth=2):
             lines.append(f"{indent}  {f}")
     return "\n".join(lines)
 
-def read_file(filepath):
+def read_file(filepath, max_lines=150):
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read()
+            lines = f.readlines()
+            if len(lines) > max_lines:
+                content = ''.join(lines[:max_lines])
+                return content + f"\n... (truncated, {len(lines)} total lines)"
+            return ''.join(lines)
     except Exception as e:
         return f"[Could not read file: {e}]"
 
