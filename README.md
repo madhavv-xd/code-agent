@@ -1,163 +1,191 @@
-# Code Agent
+# ◆ CodeAgent
 
-A terminal-based AI coding assistant that reads your code and suggests improvements using Groq's free API.
+> An interactive terminal coding assistant powered by [Groq](https://console.groq.com). Ask questions about your codebase and get streamed, intent-aware responses — like Claude Code, but for any project.
 
-## Requirements
+![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square&logo=python)
+![Groq](https://img.shields.io/badge/Powered%20by-Groq-orange?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+
+---
+
+## ✨ Features
+
+- **Streaming output** — tokens print live as they arrive, no blank waiting
+- **Intent detection** — automatically routes your question to a specialised prompt (`fix`, `review`, `improve`, `explain`)
+- **Slash command system** — switch files, models, and settings mid-session
+- **Smart context loading** — loads only the relevant function or line range, not the whole file
+- **Token budget guard** — auto-trims context before hitting model limits
+- **Conversation history** — remembers the last 3 turns for follow-up questions
+- **Save to file** — optionally append all responses to `suggestions.md`
+
+---
+
+## 📦 Installation
+
+```bash
+# Clone the repo
+git clone https://github.com/yourname/codeagent.git
+cd codeagent
+
+# Install dependencies
+pip install openai rich click python-dotenv
+```
+
+Create a `.env` file in the project root:
+
+```env
+GROQ_API_KEY=gsk_your_key_here
+DEFAULT_MODEL=llama3-70b
+```
+
+> Get a free API key at [console.groq.com](https://console.groq.com) — no credit card required.
+
+---
+
+## 🚀 Usage
+
+```bash
+# Basic — auto-detects main.py / app.py in current directory
+python agent.py
+
+# Focus on a specific file
+python agent.py --file src/api.py
+
+# Point at a different project root
+python agent.py --root ~/projects/myapp --file src/main.py
+
+# Use a faster/smaller model
+python agent.py --model llama3-8b
+
+# Save all responses to suggestions.md
+python agent.py --save
+
+# Limit lines loaded per file (good for huge files)
+python agent.py --max-lines 200
+
+# Disable streaming (wait for full response at once)
+python agent.py --no-stream
+```
+
+---
+
+## 💬 Slash Commands
+
+Once inside the agent, use these commands at any prompt:
+
+| Command | Description |
+|---|---|
+| `/file src/foo.py` | Switch the focused file |
+| `/model llama3-8b` | Switch model mid-session |
+| `/model` | List available models |
+| `/history` | Show conversation history |
+| `/clear` | Clear conversation history |
+| `/save` | Toggle save-to-file on/off |
+| `/tree` | Print project file structure |
+| `/help` | Show all commands |
+| `/quit` | Exit |
+
+---
+
+## 🧠 Intent Detection
+
+Your question is automatically routed to a specialised system prompt based on keywords:
+
+| Intent | Trigger keywords | Response format |
+|---|---|---|
+| 🔴 **Fix** | fix, bug, error, crash, failing, exception… | Root cause → Fix → Prevention |
+| 🟡 **Review** | review, audit, security, edge cases, issues… | Issues → Suggestions → Overall |
+| 🔵 **Improve** | refactor, optimize, clean, best practice… | What to improve → Before/After code |
+| 🟢 **Explain** | explain, how does, what is, walk me through… | Purpose → Logic → Gotchas |
+| ⚪ **General** | anything else | Free-form answer |
+
+Priority order is `fix > review > improve > explain`, so a question like *"find bugs and explain them"* routes to **Review**.
+
+---
+
+## ⚡ Available Models
+
+| Alias | Model | Best for |
+|---|---|---|
+| `gpt120b` | gpt-oss-120b | Default — best quality |
+| `gpt20b` | gpt-oss-20b | Fastest responses |
+
+Switch at any time with `/model <alias>` or pass `--model` at startup.
+
+---
+
+## 🗂 Project Structure
+
+```
+codeagent/
+├── agent.py      # CLI entry point, REPL loop, slash commands, UI
+├── context.py    # File tree, smart scope detection, token budgeting
+├── llm.py        # Groq API client with streaming support
+├── config.py     # API key loading, model aliases, startup validation
+└── .env          # Your API key (not committed)
+```
+
+---
+
+## 🔧 How It Works
+
+```
+User input
+    │
+    ▼
+detect_intent()        ← keyword match with priority ordering
+    │
+    ├─► PROMPTS[intent] ← specialised system prompt
+    │
+    ▼
+build_context()        ← file tree + smart scope (function / line range / full file)
+    │
+    ▼
+inject history         ← last 3 turns, with truncation notice
+    │
+    ▼
+ask() → Groq API       ← streams tokens live via Rich Live
+    │
+    ▼
+Rich Markdown output   ← coloured label + formatted response
+    │
+    └─► suggestions.md  ← optional save
+```
+
+---
+
+## 🛠 Configuration
+
+All config lives in `.env`:
+
+```env
+GROQ_API_KEY=gsk_...          # Required
+DEFAULT_MODEL=gpt120b      # Optional, defaults to llama3-70b
+```
+
+If `GROQ_API_KEY` is missing, the agent exits immediately with setup instructions rather than crashing mid-session.
+
+---
+
+## 📋 Requirements
 
 - Python 3.8+
-- Git
-- Groq API key (free) — get one at https://console.groq.com
-
-## Installation
-
-### Step 1 — Clone the repo
-```bash
-git clone https://github.com/yourusername/code-agent.git
-cd code-agent
-```
-
-### Step 2 — Create a virtual environment
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### Step 3 — Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Step 4 — Create a `.env` file
-Create a file called `.env` inside the `code-agent` folder:
-```
-GROQ_API_KEY=your-key-here
-DEFAULT_MODEL=gpt120b
-```
+- `openai` — Groq uses an OpenAI-compatible API
+- `rich` — terminal UI, markdown rendering, streaming
+- `click` — CLI argument parsing
+- `python-dotenv` — `.env` file loading
 
 ---
 
-## Run locally
-```bash
-# focus on a specific file
-python agent.py --file src/main.py
+## 🤝 Contributing
 
-# scan whole project
-python agent.py --root .
-
-# both
-python agent.py --file src/main.py --root .
-```
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feat/my-feature`
+3. Commit your changes: `git commit -m 'Add my feature'`
+4. Push and open a Pull Request
 
 ---
 
-## Make it a global command
+## 📄 License
 
-Add this to your `~/.bashrc` or `~/.zshrc`:
-```bash
-alias codeagent="$HOME/code-agent/venv/bin/python $HOME/code-agent/agent.py"
-```
-
-Reload:
-```bash
-source ~/.bashrc   # or source ~/.zshrc
-```
-
-Now use it from any folder:
-```bash
-cd ~/any-project
-codeagent --file src/main.py
-```
-
----
-
-## Available models
-
-| Shortname | Model | Best for |
-|---|---|---|
-| `gpt120b` | gpt-oss-120b | code (default) |
-| `gpt20b` | gpt-oss-20b | fast general use |
-
-Switch models with `--model` flag:
-```bash
-codeagent --file app.py --model gpt20b
-codeagent --file app.py --model gpt120b
-```
-
----
-
-## Usage examples
-```bash
-# explain a file
-codeagent --file app.py
-> what does this file do
-
-# find bugs
-codeagent --file src/auth.py
-> find any bugs or edge cases
-
-# improve code
-codeagent --file utils.py
-> how can i improve this code
-
-# fix an error
-codeagent --file main.py
-> fix the error in this file
-
-# scan whole project
-codeagent --root .
-> what does this project do
-
-# save suggestions to file
-codeagent --file app.py --save
-> review this file
-# saves to suggestions.md
-```
-
----
-
-## Intent detection
-
-The agent automatically detects what kind of help you need and adjusts its response format:
-
-| Your question | Intent | Output |
-|---|---|---|
-| "explain this" / "what does this do" | Explain | Blue — covers purpose, inputs, logic |
-| "find bugs" / "review this" | Review | Yellow — issues, suggestions, overall |
-| "improve this" / "refactor" | Improve | Cyan — before/after code examples |
-| "fix this" / "there's an error" | Fix | Red — root cause, fix, prevention |
-| "hello" / anything else | General | Green — normal response |
-
----
-
-## Getting updates
-```bash
-cd ~/code-agent
-git pull
-pip install -r requirements.txt
-```
-
----
-
-## Project structure
-```
-code-agent/
-├── agent.py         # main entry point, chat loop, intent detection
-├── context.py       # reads files, builds prompt
-├── llm.py           # groq API calls, model routing
-├── config.py        # loads settings from .env
-└── requirements.txt
-```
-
----
-
-## Troubleshooting
-
-**codeagent command not found** — run `source ~/.bashrc` or `source ~/.zshrc`.
-
-**Invalid API key** — make sure `.env` exists in the `code-agent` folder and `GROQ_API_KEY` is correct.
-
-**Rate limited** — Groq free tier allows 30 requests/minute and 14,400/day. Switch models with `--model` flag to spread usage.
-
-**File not found** — make sure the path you pass to `--file` is correct relative to where you run the command.
-
-**No response / timeout** — Groq might be briefly down. Wait a few seconds and try again.
+MIT — see [LICENSE](LICENSE) for details.
